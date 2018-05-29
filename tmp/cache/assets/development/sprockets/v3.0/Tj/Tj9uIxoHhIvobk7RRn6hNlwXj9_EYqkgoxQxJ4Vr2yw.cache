@@ -1,0 +1,82 @@
+I"(function() {
+  this.SmsAuthVerifyUI = flight.component(function() {
+    this.countDown = 0;
+    this.attributes({
+      phoneNumberInput: '#token_sms_token_phone_number',
+      verifyCodeInput: '#token_sms_token_verify_code',
+      sendCodeButton: 'button[value=send_code]'
+    });
+    this.verifyPhoneNumber = function(event, data) {
+      this.select('phoneNumberInput').parent().removeClass('has-error');
+      if (this.select('phoneNumberInput').val() === "") {
+        this.select('phoneNumberInput').parent().addClass('has-error');
+        return event.preventDefault();
+      } else {
+        return setTimeout((function(_this) {
+          return function() {
+            return _this.countDownSendCodeButton();
+          };
+        })(this), 0);
+      }
+    };
+    this.countDownSendCodeButton = function() {
+      var altName, countDownTimer, origName;
+      origName = this.select('sendCodeButton').data('orig-name');
+      altName = this.select('sendCodeButton').data('alt-name');
+      this.countDown = 30;
+      this.select('sendCodeButton').attr('disabled', 'disabled').addClass('disabled');
+      countDownTimer = (function(_this) {
+        return function() {
+          return setTimeout(function() {
+            if (_this.countDown !== 0) {
+              _this.countDown--;
+              _this.select('sendCodeButton').text(altName.replace('COUNT', _this.countDown));
+              return countDownTimer();
+            } else {
+              return _this.select('sendCodeButton').removeAttr('disabled').removeClass('disabled').text(origName);
+            }
+          }, 1000);
+        };
+      })(this);
+      return countDownTimer();
+    };
+    this.beforeSend = function(event, jqXHR, settings) {
+      var input;
+      if (settings.data.match('send_code')) {
+        return;
+      }
+      input = this.select('verifyCodeInput');
+      input.parent().removeClass('has-error');
+      if (input.val() === "") {
+        input.parent().addClass('has-error');
+        return jqXHR.abort();
+      }
+    };
+    this.handleSuccess = function(event, text, status, jqXHR) {
+      var data;
+      data = JSON.parse(text);
+      if (data.reload) {
+        window.location.reload();
+      }
+      return this.trigger('flash:notice', {
+        msg: data.text
+      });
+    };
+    this.handleError = function(event, jqXHR, status, error) {
+      var data;
+      data = JSON.parse(jqXHR.responseText);
+      this.countDown = 0;
+      return this.trigger('flash:alert', {
+        msg: data.text
+      });
+    };
+    return this.after('initialize', function() {
+      this.on(this.select('sendCodeButton'), 'click', this.verifyPhoneNumber);
+      this.on('ajax:beforeSend', this.beforeSend);
+      this.on('ajax:success', this.handleSuccess);
+      return this.on('ajax:error', this.handleError);
+    });
+  });
+
+}).call(this);
+:ET
